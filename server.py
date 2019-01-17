@@ -1,5 +1,6 @@
 #  coding: utf-8 
 import socketserver
+import os
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 # 
@@ -34,17 +35,34 @@ def parsePayload(data):
     print(method, page)
     return method, page
 
+def readHTML(dir):
+    f = open(dir, 'r') 
+    htmlPage = f.read() 
+    f.close()
+    return htmlPage
+
 class MyWebServer(socketserver.BaseRequestHandler):
 
     def handle(self):
+
         self.data = self.request.recv(1024).strip()
         print ("Got a request of: %s\n" % self.data)
         
         method, page = parsePayload(self.data)
         if method != "GET":
             self.request.sendall(bytearray("HTTP/1.1 405 Method Not Allowed\r\n",'utf-8'))
-        else:
+        # else if page not in pages:
+        #     self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
+        elif page == "" or page == "index.html":
             self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
+            homepageHtml = readHTML("www/index.html")
+            self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n%s" % homepageHtml,'utf-8'))
+        elif page == "deep":
+            self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
+            deepHtml = readHTML("www/deep/index.html")
+            self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n%s" % deepHtml,'utf-8'))
+        else:
+            self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
@@ -52,7 +70,7 @@ if __name__ == "__main__":
     socketserver.TCPServer.allow_reuse_address = True
     # Create the server, binding to localhost on port 8080
     server = socketserver.TCPServer((HOST, PORT), MyWebServer)
-    
+
     # Activate the server; this will keep running until you
     # interrupt the program with Ctrl-C
     server.serve_forever()
