@@ -31,15 +31,14 @@ def parsePayload(data):
     payload = data.decode("utf-8").split("\n")[0]
     splitPayload = payload.split(" ")
     method = splitPayload[0]
-    page = splitPayload[1].split("/")[1]
-    print(method, page)
+    page = splitPayload[1]
     return method, page
 
-def readHTML(dir):
-    f = open(dir, 'r') 
-    htmlPage = f.read() 
+def readFile(file):
+    f = open(file, 'r') 
+    readPage = f.read() 
     f.close()
-    return htmlPage
+    return readPage
 
 class MyWebServer(socketserver.BaseRequestHandler):
 
@@ -49,20 +48,38 @@ class MyWebServer(socketserver.BaseRequestHandler):
         print ("Got a request of: %s\n" % self.data)
         
         method, page = parsePayload(self.data)
+        html = None
+        css = None
+    
+        directory = "./www" + page
+
+        if os.path.isdir(directory):
+            for file in os.listdir(directory):
+                if file.endswith(".html") and page[-1] == "/":
+                    html = readFile("www%s%s" % (page, file))
+                if file.endswith(".css"):
+                    css = readFile("www%s%s" % (page, file))
+        elif os.path.isfile(directory):
+            if page.endswith(".html"):
+                html = readFile("www/%s" % page)
+            if page.endswith(".css"):
+                css = readFile("www/%s" % page)
+
         if method != "GET":
             self.request.sendall(bytearray("HTTP/1.1 405 Method Not Allowed\r\n",'utf-8'))
-        # else if page not in pages:
-        #     self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
-        elif page == "" or page == "index.html":
+        elif os.path.isdir("./www" + page) and page[-1] != "/":
+            self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n",'utf-8'))
+        elif html:
             self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
-            homepageHtml = readHTML("www/index.html")
-            self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n%s" % homepageHtml,'utf-8'))
-        elif page == "deep":
+            self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n\r\n",'utf-8'))
+            self.request.sendall(bytearray("%s\r\n" % html,'utf-8'))
+        elif css:
             self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
-            deepHtml = readHTML("www/deep/index.html")
-            self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n%s" % deepHtml,'utf-8'))
+            self.request.sendall(bytearray("Content-Type: text/css; charset=utf-8\r\n\r\n",'utf-8'))
+            self.request.sendall(bytearray("%s\r\n" % css,'utf-8'))
         else:
             self.request.sendall(bytearray("HTTP/1.1 404 Not Found\r\n",'utf-8'))
+            self.request.sendall(bytearray("Connection: close\r\n",'utf-8'))
 
 if __name__ == "__main__":
     HOST, PORT = "localhost", 8080
