@@ -58,7 +58,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
                 if file.endswith(".html") and page[-1] == "/":
                     html = readFile("www%s%s" % (page, file))
                 if file.endswith(".css"):
-                    css = readFile("www%s%s" % (page, file))
+                    css = readFile("www%s/%s" % (page, file))
         elif os.path.isfile(directory):
             if page.endswith(".html"):
                 html = readFile("www/%s" % page)
@@ -69,6 +69,8 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.request.sendall(bytearray("HTTP/1.1 405 Method Not Allowed\r\n",'utf-8'))
         elif os.path.isdir("./www" + page) and page[-1] != "/":
             self.request.sendall(bytearray("HTTP/1.1 301 Moved Permanently\r\n",'utf-8'))
+            forwardedPage = page + "/"
+            self.request.sendall(bytearray("Location: %s\r\n" % forwardedPage,'utf-8'))
         elif html:
             self.request.sendall(bytearray("HTTP/1.1 200 OK\r\n",'utf-8'))
             self.request.sendall(bytearray("Content-Type: text/html; charset=utf-8\r\n\r\n",'utf-8'))
